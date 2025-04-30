@@ -292,7 +292,6 @@ def delete_user(user_id):
         return 'You cannot delete your own account.'
 
     conn = get_db_connection()
-    conn.execute("PRAGMA foreign_keys = ON")  # REQUIRED
     c = conn.cursor()
 
     # Delete attendance entries first
