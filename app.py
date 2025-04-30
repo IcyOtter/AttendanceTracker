@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
+import psycopg2
+import os
+from urllib.parse import urlparse
 from datetime import datetime
 
 app = Flask(__name__)
@@ -12,14 +14,31 @@ def is_superuser():
 def is_plant_manager():
     return session.get('role') == 'plant_manager'
 
+def get_db_connection():
+    result = urlparse(os.environ.get("DATABASE_URL"))
+    username = result.username
+    password = result.password
+    database = result.path[1:]
+    hostname = result.hostname
+    port = result.port
+
+    return psycopg2.connect(
+        dbname=database,
+        user=username,
+        password=password,
+        host=hostname,
+        port=port
+    )
+
+
 # Database setup
 def init_db():
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     c = conn.cursor()
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             role TEXT DEFAULT 'user'
@@ -28,13 +47,12 @@ def init_db():
     
     c.execute('''
         CREATE TABLE IF NOT EXISTS attendance (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             date TEXT NOT NULL,
             issue TEXT NOT NULL,
             points REAL NOT NULL,
-            user_id INTEGER,
-            FOREIGN KEY (user_id) REFERENCES users(id)
+            user_id INTEGER REFERENCES users(id)
         )
     ''')
 
@@ -61,7 +79,7 @@ def index():
         date = request.form['date']
         points = ISSUE_POINTS.get(issue, 0)
 
-        conn = sqlite3.connect('database.db')
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute('INSERT INTO attendance (name, date, issue, points, user_id) VALUES (?, ?, ?, ?, ?)',
                   (name, date, issue, points, session['user_id']))
@@ -78,7 +96,7 @@ def summary():
     if 'user_id' not in session:
         return redirect('/login')
 
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     c = conn.cursor()
 
     if is_superuser() or is_plant_manager():
@@ -95,7 +113,7 @@ def details(name):
     if 'user_id' not in session:
         return redirect('/login')
     
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     c = conn.cursor()
     if is_superuser() or is_plant_manager():
         c.execute('SELECT id, date, issue, points FROM attendance WHERE name = ? ORDER BY date', (name,))
@@ -112,7 +130,7 @@ def delete_entry(entry_id):
     if 'user_id' not in session:
         return redirect('/login')
     
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     c = conn.cursor()
 
     # Optionally add security logic here to check ownership if desired
@@ -127,7 +145,7 @@ def edit_entry(entry_id):
     if 'user_id' not in session:
         return redirect('/login')
     
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     c = conn.cursor()
 
     if request.method == 'POST':
@@ -158,12 +176,13 @@ def register():
         username = request.form['username']
         password = generate_password_hash(request.form['password'])
 
-        conn = sqlite3.connect('database.db')
+        conn = get_db_connection()
         c = conn.cursor()
         try:
             c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
             conn.commit()
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError:
+            conn.rollback()
             conn.close()
             return 'Username already exists!'
         conn.close()
@@ -177,7 +196,7 @@ def login():
         username = request.form['username']
         password_input = request.form['password']
 
-        conn = sqlite3.connect('database.db')
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute('SELECT id, password, role FROM users WHERE username = ?', (username,))
         user = c.fetchone()
@@ -205,12 +224,13 @@ def create_superuser():
     username = 'bobby'
     password = generate_password_hash('@Icyotter462')
 
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     c = conn.cursor()
     try:
         c.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, password, 'superuser'))
         conn.commit()
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
+        conn.rollback()
         return 'Superuser already exists!'
     finally:
         conn.close()
@@ -221,7 +241,7 @@ def view_users():
     if not is_superuser():
         return redirect('/')
 
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute('SELECT id, username, role FROM users')
     users = c.fetchall()
@@ -238,7 +258,7 @@ def delete_user(user_id):
     if user_id == session.get('user_id'):
         return 'You cannot delete your own account.'
 
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     conn.execute("PRAGMA foreign_keys = ON")  # REQUIRED
     c = conn.cursor()
 
@@ -266,7 +286,7 @@ def update_user_role(user_id):
     if new_role not in ['user', 'plant_manager', 'superuser']:
         return 'Invalid role.'
 
-    conn = sqlite3.connect('database.db')
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute('UPDATE users SET role = ? WHERE id = ?', (new_role, user_id))
     conn.commit()
