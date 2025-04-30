@@ -255,6 +255,33 @@ def view_users():
 
     return render_template('users.html', users=users)
 
+@app.route('/create_user', methods=['POST'])
+def create_user():
+    if not is_superuser():
+        return redirect('/')
+
+    username = request.form['username']
+    password_raw = request.form['password']
+    role = request.form['role']
+
+    if role not in ['user', 'plant_manager', 'superuser']:
+        return 'Invalid role selected.'
+
+    password_hashed = generate_password_hash(password_raw)
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute('INSERT INTO users (username, password, role) VALUES (%s, %s, %s)', (username, password_hashed, role))
+        conn.commit()
+    except psycopg2.IntegrityError:
+        conn.rollback()
+        return 'Username already exists!'
+    finally:
+        conn.close()
+
+    return redirect('/users')
+
 
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
 def delete_user(user_id):

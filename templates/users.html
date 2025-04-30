@@ -2,6 +2,28 @@
 {% block title %}All User Accounts{% endblock %}
 {% block header %}All User Accounts{% endblock %}
 
+<h3>Create New User</h3>
+<form method="POST" action="{{ url_for('create_user') }}" class="card p-3 mb-4 shadow-sm">
+    <div class="row mb-2">
+        <div class="col">
+            <input type="text" name="username" class="form-control" placeholder="Username" required>
+        </div>
+        <div class="col">
+            <input type="password" name="password" class="form-control" placeholder="Password" required>
+        </div>
+        <div class="col">
+            <select name="role" class="form-select" required>
+                <option value="user">User</option>
+                <option value="plant_manager">Plant Manager</option>
+                <option value="superuser">Superuser</option>
+            </select>
+        </div>
+        <div class="col">
+            <button type="submit" class="btn btn-success w-100">Create</button>
+        </div>
+    </div>
+</form>
+
 {% block content %}
 <table class="table table-bordered table-striped">
     <thead class="table-dark">
