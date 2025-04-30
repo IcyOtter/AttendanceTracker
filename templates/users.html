@@ -2,6 +2,8 @@
 {% block title %}All User Accounts{% endblock %}
 {% block header %}All User Accounts{% endblock %}
 
+{% block content %}
+{% if session.get('role') == 'superuser' %}
 <h3>Create New User</h3>
 <form method="POST" action="{{ url_for('create_user') }}" class="card p-3 mb-4 shadow-sm">
     <div class="row mb-2">
@@ -23,8 +25,9 @@
         </div>
     </div>
 </form>
+{% endif %}
 
-{% block content %}
+
 <table class="table table-bordered table-striped">
     <thead class="table-dark">
         <tr>
