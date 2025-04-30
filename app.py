@@ -221,13 +221,19 @@ def logout():
 
 @app.route('/create-superuser')
 def create_superuser():
+    from werkzeug.security import generate_password_hash
+    import psycopg2
+
     username = 'bobby'
     password = generate_password_hash('@Icyotter462')
 
     conn = get_db_connection()
     c = conn.cursor()
     try:
-        c.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, password, 'superuser'))
+        c.execute(
+            'INSERT INTO users (username, password, role) VALUES (%s, %s, %s)',
+            (username, password, 'superuser')
+        )
         conn.commit()
     except psycopg2.IntegrityError:
         conn.rollback()
