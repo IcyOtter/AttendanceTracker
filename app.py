@@ -81,7 +81,7 @@ def index():
 
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute('INSERT INTO attendance (name, date, issue, points, user_id) VALUES (?, ?, ?, ?, ?)',
+        c.execute('INSERT INTO attendance (name, date, issue, points, user_id) VALUES (%s, %s, %s, %s, %s)',
                   (name, date, issue, points, session['user_id']))
         conn.commit()
         conn.close()
@@ -102,7 +102,7 @@ def summary():
     if is_superuser() or is_plant_manager():
         c.execute('SELECT name, SUM(points) FROM attendance GROUP BY name')
     else:
-        c.execute('SELECT name, SUM(points) FROM attendance WHERE user_id = ? GROUP BY name', (session['user_id'],))
+        c.execute('SELECT name, SUM(points) FROM attendance WHERE user_id = %s GROUP BY name', (session['user_id'],))
 
     summary_data = c.fetchall()
     conn.close()
@@ -116,9 +116,9 @@ def details(name):
     conn = get_db_connection()
     c = conn.cursor()
     if is_superuser() or is_plant_manager():
-        c.execute('SELECT id, date, issue, points FROM attendance WHERE name = ? ORDER BY date', (name,))
+        c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
     else:
-        c.execute('SELECT id, date, issue, points FROM attendance WHERE name = ? AND user_id = ? ORDER BY date',
+        c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s AND user_id = %s ORDER BY date',
                   (name, session['user_id']))
     
     details_data = c.fetchall()
@@ -134,7 +134,7 @@ def delete_entry(entry_id):
     c = conn.cursor()
 
     # Optionally add security logic here to check ownership if desired
-    c.execute('DELETE FROM attendance WHERE id = ?', (entry_id,))
+    c.execute('DELETE FROM attendance WHERE id = %s', (entry_id,))
     conn.commit()
     conn.close()
     return redirect(request.referrer or '/summary')
@@ -156,15 +156,15 @@ def edit_entry(entry_id):
 
         c.execute('''
             UPDATE attendance
-            SET name = ?, date = ?, issue = ?, points = ?
-            WHERE id = ?
+            SET name = %s, date = %s, issue = %s, points = %s
+            WHERE id = %s
         ''', (name, date, issue, points, entry_id))
         conn.commit()
         conn.close()
         return redirect(f'/details/{name}')
 
     # Fetch the current record
-    c.execute('SELECT name, date, issue FROM attendance WHERE id = ?', (entry_id,))
+    c.execute('SELECT name, date, issue FROM attendance WHERE id = %s', (entry_id,))
     entry = c.fetchone()
     conn.close()
 
@@ -179,7 +179,7 @@ def register():
         conn = get_db_connection()
         c = conn.cursor()
         try:
-            c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+            c.execute('INSERT INTO users (username, password) VALUES (%s, %s)', (username, password))
             conn.commit()
         except psycopg2.IntegrityError:
             conn.rollback()
@@ -198,7 +198,7 @@ def login():
 
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute('SELECT id, password, role FROM users WHERE username = ?', (username,))
+        c.execute('SELECT id, password, role FROM users WHERE username = %s', (username,))
         user = c.fetchone()
         conn.close()
 
@@ -269,9 +269,9 @@ def delete_user(user_id):
     c = conn.cursor()
 
     # Delete attendance entries first
-    c.execute('DELETE FROM attendance WHERE user_id = ?', (user_id,))
+    c.execute('DELETE FROM attendance WHERE user_id = %s', (user_id,))
     # Then delete the user
-    c.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    c.execute('DELETE FROM users WHERE id = %s', (user_id,))
 
     conn.commit()
     conn.close()
@@ -294,7 +294,7 @@ def update_user_role(user_id):
 
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('UPDATE users SET role = ? WHERE id = ?', (new_role, user_id))
+    c.execute('UPDATE users SET role = %s WHERE id = %s', (new_role, user_id))
     conn.commit()
     conn.close()
 
