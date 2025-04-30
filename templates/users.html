@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}All User Accounts{% endblock %}
+{% block header %}All User Accounts{% endblock %}
+
+{% block content %}
+<table class="table table-bordered table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user[0] }}</td>
+            <td>{{ user[1] }}</td>
+            <td>
+                {% if user[2] == 'superuser' %}
+                    <span class="badge bg-info text-dark">Superuser</span>
+                {% elif user[2] == 'plant_manager' %}
+                    <span class="badge bg-warning text-dark">Plant Manager</span>
+                {% else %}
+                    <span class="badge bg-secondary">User</span>
+                {% endif %}
+            </td>
+            <td>
+                <div class="d-flex flex-column gap-2">
+                    {% if user[2] == 'user' and user[0] != session['user_id'] %}
+                    <form method="POST" action="{{ url_for('delete_user', user_id=user[0]) }}" onsubmit="return confirm('Delete this user and their data?');">
+                        <button class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted">Delete: Not allowed</span>
+                    {% endif %}
+
+                    {% if user[0] != session['user_id'] %}
+                    <form method="POST" action="{{ url_for('update_user_role', user_id=user[0]) }}" class="d-flex">
+                        <select name="new_role" class="form-select form-select-sm me-2">
+                            <option value="user" {% if user[2] == 'user' %}selected{% endif %}>User</option>
+                            <option value="plant_manager" {% if user[2] == 'plant_manager' %}selected{% endif %}>Plant Manager</option>
+                            <option value="superuser" {% if user[2] == 'superuser' %}selected{% endif %}>Superuser</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted">Update: Cannot edit self</span>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

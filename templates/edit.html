@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Entry{% endblock %}
+{% block header %}Edit Attendance Entry{% endblock %}
+
+{% block content %}
+<form method="POST" class="card p-4 shadow-sm">
+    <div class="mb-3">
+        <label class="form-label">Name:</label>
+        <input type="text" name="name" class="form-control" value="{{ entry[0] }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Date:</label>
+        <input type="date" name="date" class="form-control" value="{{ entry[1] }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Issue:</label>
+        <select name="issue" class="form-select" required>
+            <option value="Call Off" {% if entry[2] == 'Call Off' %}selected{% endif %}>Call Off</option>
+            <option value="Leave/Late" {% if entry[2] == 'Leave/Late' %}selected{% endif %}>Leave/Late</option>
+            <option value="NCNS" {% if entry[2] == 'NCNS' %}selected{% endif %}>NCNS</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">Update</button>
+    <a href="/details/{{ entry[0] }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
