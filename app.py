@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
-import psycopg2
+import MySQLdb
 import os
 from urllib.parse import urlparse
 from datetime import datetime
@@ -14,45 +14,38 @@ def is_superuser():
 def is_plant_manager():
     return session.get('role') == 'plant_manager'
 
-def get_db_connection():
-    result = urlparse(os.environ.get("DATABASE_URL"))
-    username = result.username
-    password = result.password
-    database = result.path[1:]
-    hostname = result.hostname
-    port = result.port
 
-    return psycopg2.connect(
-        dbname=database,
-        user=username,
-        password=password,
-        host=hostname,
-        port=port
+def get_db_connection():
+    return MySQLdb.connect(
+        host='yourusername.mysql.pythonanywhere-services.com',
+        user='yourusername',
+        passwd='your_mysql_password',
+        db='yourusername$yourdbname',
+        charset='utf8mb4'
     )
 
-
-# Database setup
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
-    
+
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            role TEXT DEFAULT 'user'
+            role VARCHAR(50) DEFAULT 'user'
         )
     ''')
-    
+
     c.execute('''
         CREATE TABLE IF NOT EXISTS attendance (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            date TEXT NOT NULL,
-            issue TEXT NOT NULL,
-            points REAL NOT NULL,
-            user_id INTEGER REFERENCES users(id)
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            date VARCHAR(50) NOT NULL,
+            issue VARCHAR(50) NOT NULL,
+            points FLOAT NOT NULL,
+            user_id INT,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
 
@@ -61,7 +54,6 @@ def init_db():
 
 init_db()
 
-# Mapping issues to point values
 ISSUE_POINTS = {
     "Call Off": 1.0,
     "Leave/Late": 0.5,
@@ -181,7 +173,7 @@ def register():
         try:
             c.execute('INSERT INTO users (username, password) VALUES (%s, %s)', (username, password))
             conn.commit()
-        except psycopg2.IntegrityError:
+        except MySQLdb.IntegrityError:
             conn.rollback()
             conn.close()
             return 'Username already exists!'
@@ -221,8 +213,6 @@ def logout():
 
 @app.route('/create-superuser')
 def create_superuser():
-    from werkzeug.security import generate_password_hash
-    import psycopg2
 
     username = 'bobby'
     password = generate_password_hash('@Icyotter462')
@@ -235,7 +225,7 @@ def create_superuser():
             (username, password, 'superuser')
         )
         conn.commit()
-    except psycopg2.IntegrityError:
+    except MySQLdb.IntegrityError:
         conn.rollback()
         return 'Superuser already exists!'
     finally:
@@ -274,7 +264,7 @@ def create_user():
     try:
         c.execute('INSERT INTO users (username, password, role) VALUES (%s, %s, %s)', (username, password_hashed, role))
         conn.commit()
-    except psycopg2.IntegrityError:
+    except MySQLdb.IntegrityError:
         conn.rollback()
         return 'Username already exists!'
     finally:
