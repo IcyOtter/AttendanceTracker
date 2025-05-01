@@ -62,19 +62,19 @@ ISSUE_POINTS = {
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    if 'user_id' not in session:
-        return redirect('/login')
-
     if request.method == 'POST':
         name = request.form['name']
         issue = request.form['issue']
         date = request.form['date']
+        shift = request.form['shift']
         points = ISSUE_POINTS.get(issue, 0)
 
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute('INSERT INTO attendance (name, date, issue, points, user_id) VALUES (%s, %s, %s, %s, %s)',
-                  (name, date, issue, points, session['user_id']))
+        c.execute('''
+            INSERT INTO attendance (name, date, issue, points, user_id, shift)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (name, date, issue, points, session['user_id'], shift))
         conn.commit()
         conn.close()
 

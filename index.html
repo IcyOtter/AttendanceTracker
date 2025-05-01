@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Log Attendance{% endblock %}
+{% block header %}Log Attendance Issue{% endblock %}
+
+{% block content %}
+<form method="POST" class="card p-4 shadow-sm">
+    <div class="mb-3">
+        <label>Name</label>
+        <input type="text" name="name" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Date</label>
+        <input type="date" name="date" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Issue</label>
+        <select name="issue" class="form-select" required>
+            <option value="Call Off">Call Off</option>
+            <option value="Leave/Late">Leave/Late</option>
+            <option value="NCNS">NCNS</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>Shift</label>
+        <select name="shift" class="form-select" required>
+            <option value="Green">Green</option>
+            <option value="Blue">Blue</option>
+            <option value="Orange">Orange</option>
+            <option value="Red">Red</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
+<div class="mt-3">
+    <a href="/summary" class="btn btn-link">View Summary</a>
+</div>
+{% endblock %}
