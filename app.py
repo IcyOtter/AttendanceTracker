@@ -106,15 +106,18 @@ def summary():
         ''', (shift,))
     else:
         # Regular users only see attendance records for their shift
-        c.execute('SELECT shift FROM users WHERE id = %s', (session['user_id'],))
-        user_shift = c.fetchone()[0]
+        c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
+        user_shift, user_building = c.fetchone()
 
         c.execute('''
             SELECT name, SUM(points)
             FROM attendance
-            WHERE shift = %s
+            WHERE shift = %s AND user_id IN (
+                SELECT id FROM users WHERE shift = %s AND building = %s
+            )
             GROUP BY name
-        ''', (user_shift,))
+        ''', (user_shift, user_shift, user_building))
+
 
 
 
@@ -133,17 +136,24 @@ def details(name):
     if is_superuser() or is_plant_manager():
         c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
     else:
-        c.execute('SELECT shift FROM users WHERE id = %s', (session['user_id'],))
-        user_shift = c.fetchone()[0]
+        c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
+        user_shift, user_building = c.fetchone()
 
-        c.execute('SELECT shift FROM attendance WHERE name = %s LIMIT 1', (name,))
-        entry_shift = c.fetchone()
+        c.execute('''
+            SELECT 1
+            FROM users u
+            JOIN attendance a ON a.user_id = u.id
+            WHERE a.name = %s AND u.shift = %s AND u.building = %s
+            LIMIT 1
+        ''', (name, user_shift, user_building))
+        allowed = c.fetchone()
 
-        if entry_shift and entry_shift[0] == user_shift:
+        if allowed:
             c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
         else:
             conn.close()
             return 'Access denied.'
+
 
     
     details_data = c.fetchall()
