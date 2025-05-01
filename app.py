@@ -105,7 +105,17 @@ def summary():
             GROUP BY a.name
         ''', (shift,))
     else:
-        c.execute('SELECT name, SUM(points) FROM attendance WHERE user_id = %s GROUP BY name', (session['user_id'],))
+        # Regular user sees others on the same shift
+        c.execute('SELECT shift FROM users WHERE id = %s', (session['user_id'],))
+        shift = c.fetchone()[0]
+        c.execute('''
+            SELECT a.name, SUM(a.points)
+            FROM attendance a
+            JOIN users u ON a.user_id = u.id
+            WHERE u.shift = %s
+            GROUP BY a.name
+        ''', (shift,))
+
 
 
     summary_data = c.fetchall()
@@ -122,8 +132,17 @@ def details(name):
     if is_superuser() or is_plant_manager():
         c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
     else:
-        c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s AND user_id = %s ORDER BY date',
-                  (name, session['user_id']))
+        # Check if target user is in same shift
+        c.execute('SELECT shift FROM users WHERE id = %s', (session['user_id'],))
+        user_shift = c.fetchone()[0]
+        
+        c.execute('SELECT shift FROM users WHERE username = %s', (name,))
+        target_shift_result = c.fetchone()
+        
+        if target_shift_result and target_shift_result[0] == user_shift:
+            c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
+        else:
+            return 'Access denied.'
     
     details_data = c.fetchall()
     conn.close()
