@@ -17,10 +17,10 @@ def is_plant_manager():
 
 def get_db_connection():
     return MySQLdb.connect(
-        host='yourusername.mysql.pythonanywhere-services.com',
-        user='yourusername',
-        passwd='your_mysql_password',
-        db='yourusername$yourdbname',
+        host='IcyOtter.mysql.pythonanywhere-services.com',
+        user='IcyOtter',
+        passwd='okR3Fkx$E$hE49vc',
+        db='IcyOtter$attendance',
         charset='utf8mb4'
     )
 
@@ -91,10 +91,22 @@ def summary():
     conn = get_db_connection()
     c = conn.cursor()
 
-    if is_superuser() or is_plant_manager():
+    if is_superuser():
         c.execute('SELECT name, SUM(points) FROM attendance GROUP BY name')
+    elif is_plant_manager():
+        # plant manager sees users in their shift
+        c.execute('SELECT shift FROM users WHERE id = %s', (session['user_id'],))
+        shift = c.fetchone()[0]
+        c.execute('''
+            SELECT a.name, SUM(a.points)
+            FROM attendance a
+            JOIN users u ON a.user_id = u.id
+            WHERE u.shift = %s
+            GROUP BY a.name
+        ''', (shift,))
     else:
         c.execute('SELECT name, SUM(points) FROM attendance WHERE user_id = %s GROUP BY name', (session['user_id'],))
+
 
     summary_data = c.fetchall()
     conn.close()
@@ -239,7 +251,7 @@ def view_users():
 
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('SELECT id, username, role FROM users')
+    c.execute('SELECT id, username, role, shift FROM users')
     users = c.fetchall()
     conn.close()
 
@@ -250,19 +262,25 @@ def create_user():
     if not is_superuser():
         return redirect('/')
 
-    username = request.form['username']
+    username = request.form['username'].strip()
     password_raw = request.form['password']
     role = request.form['role']
+    shift = request.form['shift']
 
     if role not in ['user', 'plant_manager', 'superuser']:
         return 'Invalid role selected.'
+    if shift not in ['Green', 'Blue', 'Orange', 'Red']:
+        return 'Invalid shift selected.'
 
     password_hashed = generate_password_hash(password_raw)
 
     conn = get_db_connection()
     c = conn.cursor()
     try:
-        c.execute('INSERT INTO users (username, password, role) VALUES (%s, %s, %s)', (username, password_hashed, role))
+        c.execute(
+            'INSERT INTO users (username, password, role, shift) VALUES (%s, %s, %s, %s)',
+            (username, password_hashed, role, shift)
+        )
         conn.commit()
     except MySQLdb.IntegrityError:
         conn.rollback()
@@ -271,6 +289,7 @@ def create_user():
         conn.close()
 
     return redirect('/users')
+
 
 
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
@@ -301,20 +320,24 @@ def update_user_role(user_id):
         return redirect('/')
 
     if user_id == session.get('user_id'):
-        return 'You cannot change your own role.'
+        return 'You cannot change your own role or shift.'
 
     new_role = request.form.get('new_role')
+    new_shift = request.form.get('new_shift')
 
     if new_role not in ['user', 'plant_manager', 'superuser']:
         return 'Invalid role.'
+    if new_shift not in ['Green', 'Blue', 'Orange', 'Red']:
+        return 'Invalid shift.'
 
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('UPDATE users SET role = %s WHERE id = %s', (new_role, user_id))
+    c.execute('UPDATE users SET role = %s, shift = %s WHERE id = %s', (new_role, new_shift, user_id))
     conn.commit()
     conn.close()
 
     return redirect('/users')
+
 
 # For local dev
 if __name__ == '__main__':
