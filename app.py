@@ -272,7 +272,7 @@ def view_users():
 
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('SELECT id, username, role, shift FROM users')
+    c.execute('SELECT id, username, role, shift, building FROM users')
     users = c.fetchall()
     conn.close()
 
@@ -287,6 +287,7 @@ def create_user():
     password_raw = request.form['password']
     role = request.form['role']
     shift = request.form['shift']
+    building = request.form['building']
 
     if role not in ['user', 'plant_manager', 'superuser']:
         return 'Invalid role selected.'
@@ -299,9 +300,10 @@ def create_user():
     c = conn.cursor()
     try:
         c.execute(
-            'INSERT INTO users (username, password, role, shift) VALUES (%s, %s, %s, %s)',
-            (username, password_hashed, role, shift)
+            'INSERT INTO users (username, password, role, shift, building) VALUES (%s, %s, %s, %s, %s)',
+            (username, password_hashed, role, shift, building)
         )
+
         conn.commit()
     except MySQLdb.IntegrityError:
         conn.rollback()
@@ -345,6 +347,7 @@ def update_user_role(user_id):
 
     new_role = request.form.get('new_role')
     new_shift = request.form.get('new_shift')
+    new_building = request.form.get('new_building')
 
     if new_role not in ['user', 'plant_manager', 'superuser']:
         return 'Invalid role.'
@@ -353,7 +356,10 @@ def update_user_role(user_id):
 
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute('UPDATE users SET role = %s, shift = %s WHERE id = %s', (new_role, new_shift, user_id))
+    c.execute(
+        'UPDATE users SET role = %s, shift = %s, building = %s WHERE id = %s',
+        (new_role, new_shift, new_building, user_id)
+    )
     conn.commit()
     conn.close()
 

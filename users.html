@@ -27,6 +27,13 @@
             </select>
         </div>
         <div class="col">
+            <select name="building" class="form-select" required>
+                <option value="Frackville">Frackville</option>
+                <option value="Orwigsburg">Orwigsburg</option>
+            </select>
+        </div>
+        
+        <div class="col">
             <button type="submit" class="btn btn-success w-100">Create</button>
         </div>
     </div>
@@ -41,6 +48,7 @@
             <th>Role</th>
             <th>Shift</th>
             <th>Actions</th>
+            <th>Building</th>
         </tr>
     </thead>
     <tbody>
@@ -50,6 +58,8 @@
             <td>{{ user[1] }}</td>
             <td>{{ user[2] }}</td>
             <td>{{ user[3] }}</td>
+            <td>{{ user[4] }}</td>
+
             <td>
                 <div class="d-flex flex-column gap-2">
                     {% if user[0] != session['user_id'] %}
@@ -69,6 +79,10 @@
                             <option value="Orange" {% if user[3] == 'Orange' %}selected{% endif %}>Orange</option>
                             <option value="Red" {% if user[3] == 'Red' %}selected{% endif %}>Red</option>
                         </select>
+                        <select name="new_building" class="form-select form-select-sm me-1">
+                            <option value="Frackville" {% if user[4] == 'Frackville' %}selected{% endif %}>Frackville</option>
+                            <option value="Orwigsburg" {% if user[4] == 'Orwigsburg' %}selected{% endif %}>Orwigsburg</option>
+                        </select>                        
                         <button type="submit" class="btn btn-sm btn-primary">Update</button>
                     </form>
                     {% else %}
