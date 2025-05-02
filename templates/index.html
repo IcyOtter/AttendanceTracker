@@ -4,23 +4,33 @@
 {% block header %}Log Attendance Issue{% endblock %}
 
 {% block content %}
-<form method="POST" class="card p-4 shadow-sm">
+<form method="POST" action="{{ url_for('log_attendance') }}" class="card p-4 shadow-sm">
     <div class="mb-3">
-        <label class="form-label">Name:</label>
+        <label>Name</label>
         <input type="text" name="name" class="form-control" required>
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Date:</label>
+        <label>Date</label>
         <input type="date" name="date" class="form-control" required>
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Issue:</label>
+        <label>Issue</label>
         <select name="issue" class="form-select" required>
-            <option>Call Off</option>
-            <option>Leave/Late</option>
-            <option>NCNS</option>
+            <option value="Call Off">Call Off</option>
+            <option value="Leave/Late">Leave/Late</option>
+            <option value="NCNS">NCNS</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>Shift</label>
+        <select name="shift" class="form-select" required>
+            <option value="Green">Green</option>
+            <option value="Blue">Blue</option>
+            <option value="Orange">Orange</option>
+            <option value="Red">Red</option>
         </select>
     </div>
 

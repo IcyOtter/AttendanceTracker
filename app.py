@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 import MySQLdb
+from functools import wraps
 import os
 from urllib.parse import urlparse
 from datetime import datetime
@@ -60,8 +61,22 @@ ISSUE_POINTS = {
     "NCNS": 2.0
 }
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/')
+def home():
+    if 'user_id' in session:
+        return redirect('/summary')
+    return redirect('/login')
+
+@app.route('/log', methods=['GET', 'POST'])
+def log_attendance():
     if request.method == 'POST':
         name = request.form['name']
         issue = request.form['issue']
@@ -84,6 +99,7 @@ def index():
 
 
 @app.route('/summary')
+@login_required
 def summary():
     if 'user_id' not in session:
         return redirect('/login')
@@ -127,6 +143,7 @@ def summary():
     return render_template('summary.html', summary=summary_data)
 
 @app.route('/details/<name>')
+@login_required
 def details(name):
     if 'user_id' not in session:
         return redirect('/login')
@@ -161,6 +178,7 @@ def details(name):
     return render_template('details.html', name=name, details=details_data)
 
 @app.route('/delete/<int:entry_id>', methods=['POST'])
+@login_required
 def delete_entry(entry_id):
     if 'user_id' not in session:
         return redirect('/login')
@@ -176,6 +194,7 @@ def delete_entry(entry_id):
 
 
 @app.route('/edit/<int:entry_id>', methods=['GET', 'POST'])
+@login_required
 def edit_entry(entry_id):
     if 'user_id' not in session:
         return redirect('/login')
@@ -241,12 +260,10 @@ def login():
             session['user_id'] = user[0]
             session['username'] = username
             session['role'] = user[2]
-            return redirect('/')
+            return redirect('/log')
         else:
             return 'Invalid credentials!'
     return render_template('login.html')
-
-
 
 
 @app.route('/logout')
@@ -276,6 +293,7 @@ def create_superuser():
     return 'Superuser created!'
 
 @app.route('/users')
+@login_required
 def view_users():
     if not is_superuser():
         return redirect('/')
@@ -289,6 +307,7 @@ def view_users():
     return render_template('users.html', users=users)
 
 @app.route('/create_user', methods=['POST'])
+@login_required
 def create_user():
     if not is_superuser():
         return redirect('/')
