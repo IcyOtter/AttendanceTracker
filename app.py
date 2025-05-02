@@ -5,7 +5,6 @@ import os
 from urllib.parse import urlparse
 from datetime import datetime
 
-# Testing version control
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Change this in production!
 
@@ -79,7 +78,7 @@ def index():
         conn.commit()
         conn.close()
 
-        return redirect('/summary')
+        return redirect('/login')
 
     return render_template('index.html')
 
