@@ -55,12 +55,14 @@ def init_db():
 
 init_db()
 
+# Define the points for each issue type
 ISSUE_POINTS = {
     "Call Off": 1.0,
     "Leave/Late": 0.5,
     "NCNS": 2.0
 }
 
+# Define the login required decorator
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -69,12 +71,14 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Define the route for the home page
 @app.route('/')
 def home():
     if 'user_id' in session:
         return redirect('/summary')
     return redirect('/login')
 
+# Define the route for the attendance logging page
 @app.route('/log', methods=['GET', 'POST'])
 def log_attendance():
     if request.method == 'POST':
@@ -97,7 +101,7 @@ def log_attendance():
 
     return render_template('index.html')
 
-
+# Define the route for the attendance summary page
 @app.route('/summary')
 @login_required
 def summary():
@@ -142,6 +146,7 @@ def summary():
     conn.close()
     return render_template('summary.html', summary=summary_data)
 
+# Define the route for the attendance details page
 @app.route('/details/<name>')
 @login_required
 def details(name):
@@ -177,6 +182,7 @@ def details(name):
     conn.close()
     return render_template('details.html', name=name, details=details_data)
 
+# Define the route for deleting an entry
 @app.route('/delete/<int:entry_id>', methods=['POST'])
 @login_required
 def delete_entry(entry_id):
@@ -192,7 +198,7 @@ def delete_entry(entry_id):
     conn.close()
     return redirect(request.referrer or '/summary')
 
-
+# Define the route for editing an entry
 @app.route('/edit/<int:entry_id>', methods=['GET', 'POST'])
 @login_required
 def edit_entry(entry_id):
@@ -224,6 +230,7 @@ def edit_entry(entry_id):
 
     return render_template('edit.html', id=entry_id, entry=entry)
 
+# Define the route for the registration page
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -243,7 +250,7 @@ def register():
         return redirect('/login')
     return render_template('register.html')
 
-
+# Define the route for the login page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -265,12 +272,13 @@ def login():
             return 'Invalid credentials!'
     return render_template('login.html')
 
-
+# Define the route for the logout page
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect('/login')
 
+''' Uncomment this block to enable superuser creation
 @app.route('/create-superuser')
 def create_superuser():
 
@@ -291,7 +299,8 @@ def create_superuser():
     finally:
         conn.close()
     return 'Superuser created!'
-
+'''
+# Define the route for the user management page
 @app.route('/users')
 @login_required
 def view_users():
@@ -306,6 +315,7 @@ def view_users():
 
     return render_template('users.html', users=users)
 
+# Define the route for creating a new user
 @app.route('/create_user', methods=['POST'])
 @login_required
 def create_user():
@@ -343,7 +353,7 @@ def create_user():
     return redirect('/users')
 
 
-
+# Define the route for deleting a user
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
 def delete_user(user_id):
     if not is_superuser():
@@ -365,7 +375,7 @@ def delete_user(user_id):
 
     return redirect('/users')
 
-
+# Define the route for updating a user's role and shift
 @app.route('/update_user_role/<int:user_id>', methods=['POST'])
 def update_user_role(user_id):
     if not is_superuser():

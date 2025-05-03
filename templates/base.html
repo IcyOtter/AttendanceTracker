@@ -13,19 +13,19 @@
             {% if session.get('user_id') %}
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
+                    <li class="nav-item"> <!-- Log Entry link -->
                         <a class="nav-link{% if request.path == '/log' %} active{% endif %}" href="{{ url_for('log_attendance') }}">Log Entry</a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item"> <!-- Summary link-->
                         <a class="nav-link{% if request.path == '/summary' %} active{% endif %}" href="/summary">Summary</a>
                     </li>
                     {% if session.get('role') == 'superuser' %}
-                    <li class="nav-item">
+                    <li class="nav-item"> <!-- Users link only accessible by SUPERUSER -->
                         <a class="nav-link{% if request.path == '/users' %} active{% endif %}" href="/users">All Accounts</a>
                     </li>
                     {% endif %}
                 </ul>
-                <span class="navbar-text me-3">
+                <span class="navbar-text me-3"> <!-- Badge for different users -->
                     {{ session.get('username') }}
                     {% if session.get('is_superuser') %}
                         <span class="badge bg-info text-dark">Superuser</span>
