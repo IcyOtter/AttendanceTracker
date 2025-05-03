@@ -3,21 +3,41 @@
 
 {% block content %}
 <h3>Create New User</h3>
-<form method="POST" action="{{ url_for('update_user_role', user_id=user[0]) }}" class="d-flex mt-1">
-    <select name="new_role" class="form-select form-select-sm me-1">
-        <option value="user" {% if user[2] == 'user' %}selected{% endif %}>User</option>
-        <option value="plant_manager" {% if user[2] == 'plant_manager' %}selected{% endif %}>Plant Manager</option>
-        <option value="superuser" {% if user[2] == 'superuser' %}selected{% endif %}>Superuser</option>
-    </select>
-    <select name="new_shift" class="form-select form-select-sm me-1">
-        <option value="Green" {% if user[3] == 'Green' %}selected{% endif %}>Green</option>
-        <option value="Blue" {% if user[3] == 'Blue' %}selected{% endif %}>Blue</option>
-        <option value="Orange" {% if user[3] == 'Orange' %}selected{% endif %}>Orange</option>
-        <option value="Red" {% if user[3] == 'Red' %}selected{% endif %}>Red</option>
-    </select>
-    <button type="submit" class="btn btn-sm btn-primary">Update</button>
+<form method="POST" action="{{ url_for('create_user') }}" class="card p-3 mb-4 shadow-sm">
+    <div class="row mb-3">
+        <div class="col">
+            <input type="text" name="username" class="form-control" placeholder="Username" required>
+        </div>
+        <div class="col">
+            <input type="password" name="password" class="form-control" placeholder="Password" required>
+        </div>
+        <div class="col">
+            <select name="role" class="form-select" required>
+                <option value="user">User</option>
+                <option value="plant_manager">Plant Manager</option>
+                <option value="superuser">Superuser</option>
+            </select>
+        </div>
+        <div class="col">
+            <select name="shift" class="form-select" required>
+                <option value="Green">Green</option>
+                <option value="Blue">Blue</option>
+                <option value="Orange">Orange</option>
+                <option value="Red">Red</option>
+            </select>
+        </div>
+        <div class="col">
+            <select name="building" class="form-select" required>
+                <option value="Frackville">Frackville</option>
+                <option value="Orwigsburg">Orwigsburg</option>
+            </select>
+        </div>
+        
+        <div class="col">
+            <button type="submit" class="btn btn-success w-100">Create</button>
+        </div>
+    </div>
 </form>
-
 
 <h4>Current Users</h4>
 <table class="table table-bordered table-striped">
@@ -28,6 +48,7 @@
             <th>Role</th>
             <th>Shift</th>
             <th>Actions</th>
+            <th>Building</th>
         </tr>
     </thead>
     <tbody>
@@ -37,14 +58,37 @@
             <td>{{ user[1] }}</td>
             <td>{{ user[2] }}</td>
             <td>{{ user[3] }}</td>
+            <td>{{ user[4] }}</td>
+
             <td>
-                {% if user[0] != session['user_id'] %}
-                <form method="POST" action="{{ url_for('delete_user', user_id=user[0]) }}" class="d-inline-block" onsubmit="return confirm('Delete this user?');">
-                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                </form>
-                {% else %}
-                <span class="text-muted">Not allowed</span>
-                {% endif %}
+                <div class="d-flex flex-column gap-2">
+                    {% if user[0] != session['user_id'] %}
+                    <form method="POST" action="{{ url_for('delete_user', user_id=user[0]) }}" onsubmit="return confirm('Delete this user and their data?');">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+
+                    <form method="POST" action="{{ url_for('update_user_role', user_id=user[0]) }}" class="d-flex">
+                        <select name="new_role" class="form-select form-select-sm me-1">
+                            <option value="user" {% if user[2] == 'user' %}selected{% endif %}>User</option>
+                            <option value="plant_manager" {% if user[2] == 'plant_manager' %}selected{% endif %}>Plant Manager</option>
+                            <option value="superuser" {% if user[2] == 'superuser' %}selected{% endif %}>Superuser</option>
+                        </select>
+                        <select name="new_shift" class="form-select form-select-sm me-1">
+                            <option value="Green" {% if user[3] == 'Green' %}selected{% endif %}>Green</option>
+                            <option value="Blue" {% if user[3] == 'Blue' %}selected{% endif %}>Blue</option>
+                            <option value="Orange" {% if user[3] == 'Orange' %}selected{% endif %}>Orange</option>
+                            <option value="Red" {% if user[3] == 'Red' %}selected{% endif %}>Red</option>
+                        </select>
+                        <select name="new_building" class="form-select form-select-sm me-1">
+                            <option value="Frackville" {% if user[4] == 'Frackville' %}selected{% endif %}>Frackville</option>
+                            <option value="Orwigsburg" {% if user[4] == 'Orwigsburg' %}selected{% endif %}>Orwigsburg</option>
+                        </select>                        
+                        <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted">Cannot modify self</span>
+                    {% endif %}
+                </div>
             </td>
         </tr>
         {% endfor %}
