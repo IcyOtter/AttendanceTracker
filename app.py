@@ -108,24 +108,37 @@ def summary():
     if 'user_id' not in session:
         return redirect('/login')
 
+    selected_shift = request.args.get('shift')
+
     conn = get_db_connection()
     c = conn.cursor()
 
     if is_superuser():
-        c.execute('SELECT name, SUM(points) FROM attendance GROUP BY name')
+        if selected_shift:
+            c.execute('SELECT name, SUM(points) FROM attendance WHERE shift = %s GROUP BY name', (selected_shift,))
+        else:
+            c.execute('SELECT name, SUM(points) FROM attendance GROUP BY name')
     elif is_plant_manager():
-        # plant manager sees users in their shift
-        c.execute('SELECT shift FROM users WHERE id = %s', (session['user_id'],))
-        shift = c.fetchone()[0]
-        c.execute('''
-            SELECT a.name, SUM(a.points)
-            FROM attendance a
-            JOIN users u ON a.user_id = u.id
-            WHERE u.shift = %s
-            GROUP BY a.name
-        ''', (shift,))
+        c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
+        user_shift, user_building = c.fetchone()
+
+        if selected_shift and selected_shift == user_shift:
+            c.execute('''
+                SELECT a.name, SUM(a.points)
+                FROM attendance a
+                JOIN users u ON a.user_id = u.id
+                WHERE u.shift = %s AND u.building = %s
+                GROUP BY a.name
+            ''', (selected_shift, user_building))
+        else:
+            c.execute('''
+                SELECT a.name, SUM(a.points)
+                FROM attendance a
+                JOIN users u ON a.user_id = u.id
+                WHERE u.shift = %s AND u.building = %s
+                GROUP BY a.name
+            ''', (user_shift, user_building))
     else:
-        # Regular users only see attendance records for their shift
         c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
         user_shift, user_building = c.fetchone()
 
@@ -138,13 +151,10 @@ def summary():
             GROUP BY name
         ''', (user_shift, user_shift, user_building))
 
-
-
-
-
     summary_data = c.fetchall()
     conn.close()
-    return render_template('summary.html', summary=summary_data)
+    return render_template('summary.html', summary=summary_data, selected_shift=selected_shift)
+
 
 # Define the route for the attendance details page
 @app.route('/details/<name>')
