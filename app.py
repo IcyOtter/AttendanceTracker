@@ -97,7 +97,7 @@ def log_attendance():
         conn.commit()
         conn.close()
 
-        return redirect('/login')
+        return redirect('/summary')
 
     return render_template('index.html')
 
@@ -109,35 +109,40 @@ def summary():
         return redirect('/login')
 
     selected_shift = request.args.get('shift')
+    selected_building = request.args.get('building')
 
     conn = get_db_connection()
     c = conn.cursor()
 
     if is_superuser():
+        query = 'SELECT name, SUM(points) FROM attendance'
+        params = []
+        conditions = []
+
         if selected_shift:
-            c.execute('SELECT name, SUM(points) FROM attendance WHERE shift = %s GROUP BY name', (selected_shift,))
-        else:
-            c.execute('SELECT name, SUM(points) FROM attendance GROUP BY name')
+            conditions.append('shift = %s')
+            params.append(selected_shift)
+        if selected_building:
+            conditions.append('building = %s')
+            params.append(selected_building)
+
+        if conditions:
+            query += ' WHERE ' + ' AND '.join(conditions)
+
+        query += ' GROUP BY name'
+        c.execute(query, tuple(params))
+
     elif is_plant_manager():
         c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
         user_shift, user_building = c.fetchone()
 
-        if selected_shift and selected_shift == user_shift:
-            c.execute('''
-                SELECT a.name, SUM(a.points)
-                FROM attendance a
-                JOIN users u ON a.user_id = u.id
-                WHERE u.shift = %s AND u.building = %s
-                GROUP BY a.name
-            ''', (selected_shift, user_building))
-        else:
-            c.execute('''
-                SELECT a.name, SUM(a.points)
-                FROM attendance a
-                JOIN users u ON a.user_id = u.id
-                WHERE u.shift = %s AND u.building = %s
-                GROUP BY a.name
-            ''', (user_shift, user_building))
+        c.execute('''
+            SELECT a.name, SUM(a.points)
+            FROM attendance a
+            JOIN users u ON a.user_id = u.id
+            WHERE u.shift = %s AND u.building = %s
+            GROUP BY a.name
+        ''', (user_shift, user_building))
     else:
         c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
         user_shift, user_building = c.fetchone()
@@ -145,16 +150,16 @@ def summary():
         c.execute('''
             SELECT name, SUM(points)
             FROM attendance
-            WHERE shift = %s AND user_id IN (
+            WHERE shift = %s AND building = %s AND user_id IN (
                 SELECT id FROM users WHERE shift = %s AND building = %s
             )
             GROUP BY name
-        ''', (user_shift, user_shift, user_building))
+        ''', (user_shift, user_building, user_shift, user_building))
 
     summary_data = c.fetchall()
     conn.close()
-    return render_template('summary.html', summary=summary_data, selected_shift=selected_shift)
-
+    return render_template('summary.html', summary=summary_data,
+                           selected_shift=selected_shift, selected_building=selected_building)
 
 # Define the route for the attendance details page
 @app.route('/details/<name>')
@@ -162,11 +167,23 @@ def summary():
 def details(name):
     if 'user_id' not in session:
         return redirect('/login')
-    
+
     conn = get_db_connection()
     c = conn.cursor()
+
+    # Check if any attendance records exist for the name
+    c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
+    details_data = c.fetchall()
+
+    # If no records, just redirect
+    if not details_data:
+        conn.close()
+        return redirect('/summary')
+
+    # Access control
     if is_superuser() or is_plant_manager():
-        c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
+        conn.close()
+        return render_template('details.html', name=name, details=details_data)
     else:
         c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
         user_shift, user_building = c.fetchone()
@@ -180,16 +197,11 @@ def details(name):
         ''', (name, user_shift, user_building))
         allowed = c.fetchone()
 
-        if allowed:
-            c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
-        else:
-            conn.close()
+        conn.close()
+
+        if not allowed:
             return 'Access denied.'
 
-
-    
-    details_data = c.fetchall()
-    conn.close()
     return render_template('details.html', name=name, details=details_data)
 
 # Define the route for deleting an entry
