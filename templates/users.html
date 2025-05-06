@@ -47,8 +47,8 @@
             <th>Username</th>
             <th>Role</th>
             <th>Shift</th>
-            <th>Actions</th>
             <th>Building</th>
+            <th>Action</th>
         </tr>
     </thead>
     <tbody>
@@ -66,19 +66,22 @@
                     <form method="POST" action="{{ url_for('delete_user', user_id=user[0]) }}" onsubmit="return confirm('Delete this user and their data?');">
                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                     </form>
-
+            
                     <form method="POST" action="{{ url_for('update_user_role', user_id=user[0]) }}" class="d-flex">
+                        <!-- Role -->
                         <select name="new_role" class="form-select form-select-sm me-1">
                             <option value="user" {% if user[2] == 'user' %}selected{% endif %}>User</option>
                             <option value="plant_manager" {% if user[2] == 'plant_manager' %}selected{% endif %}>Plant Manager</option>
                             <option value="superuser" {% if user[2] == 'superuser' %}selected{% endif %}>Superuser</option>
                         </select>
+                        <!-- Shift -->
                         <select name="new_shift" class="form-select form-select-sm me-1">
                             <option value="Green" {% if user[3] == 'Green' %}selected{% endif %}>Green</option>
                             <option value="Blue" {% if user[3] == 'Blue' %}selected{% endif %}>Blue</option>
                             <option value="Orange" {% if user[3] == 'Orange' %}selected{% endif %}>Orange</option>
                             <option value="Red" {% if user[3] == 'Red' %}selected{% endif %}>Red</option>
                         </select>
+                        <!-- Building -->
                         <select name="new_building" class="form-select form-select-sm me-1">
                             <option value="Frackville" {% if user[4] == 'Frackville' %}selected{% endif %}>Frackville</option>
                             <option value="Orwigsburg" {% if user[4] == 'Orwigsburg' %}selected{% endif %}>Orwigsburg</option>
