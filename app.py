@@ -253,6 +253,7 @@ def edit_entry(entry_id):
     return render_template('edit.html', id=entry_id, entry=entry)
 
 # Define the route for the registration page
+"""
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -271,7 +272,7 @@ def register():
         conn.close()
         return redirect('/login')
     return render_template('register.html')
-
+"""
 # Define the route for the login page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
