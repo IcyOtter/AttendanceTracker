@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 import MySQLdb
 from functools import wraps
@@ -374,6 +374,33 @@ def create_user():
 
     return redirect('/users')
 
+# Define the route for changing a user's password
+@app.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        current_password = request.form['current_password']
+        new_password = request.form['new_password']
+
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('SELECT password FROM users WHERE id = %s', (session['user_id'],))
+        user = c.fetchone()
+
+        if not user or not check_password_hash(user[0], current_password):
+            conn.close()
+            flash('Current password is incorrect.', 'danger')
+            return redirect('/change_password')
+
+        new_password_hash = generate_password_hash(new_password)
+        c.execute('UPDATE users SET password = %s WHERE id = %s', (new_password_hash, session['user_id']))
+        conn.commit()
+        conn.close()
+
+        flash('Password updated successfully!', 'success')
+        return redirect('/summary')
+
+    return render_template('change_password.html')
 
 # Define the route for deleting a user
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
