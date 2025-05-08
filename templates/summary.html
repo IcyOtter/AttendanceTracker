@@ -5,7 +5,7 @@
 
 {% block content %} 
 <!--Filtering-->
-<form method="get" class="mb-3 d-flex align-items-end gap-2">
+<form method="get" class="mb-3 d-flex align-items-end gap-2 flex-wrap">
     <div>
         <label class="form-label">Filter by Shift:</label>
         <select name="shift" class="form-select">
@@ -16,6 +16,7 @@
             <option value="Red" {% if selected_shift == 'Red' %}selected{% endif %}>Red</option>
         </select>
     </div>
+
     <div>
         <label class="form-label">Filter by Building:</label>
         <select name="building" class="form-select">
@@ -24,11 +25,26 @@
             <option value="Orwigsburg" {% if selected_building == 'Orwigsburg' %}selected{% endif %}>Orwigsburg</option>
         </select>
     </div>
+
     <div>
-        <button type="submit" class="btn btn-primary">Filter</button>
+        <label class="form-label">Search:</label>
+        <input type="text" name="name" class="form-control" value="{{ name_filter or '' }}">
+    </div>
+
+    <div>
+        <label class="form-label">Sort By:</label>
+        <select name="sort" class="form-select">
+            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Points: High to Low</option>
+            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Points: Low to High</option>
+            <option value="alpha" {% if sort_order == 'alpha' %}selected{% endif %}>Name: A to Z</option>
+            <option value="alpha_desc" {% if sort_order == 'alpha_desc' %}selected{% endif %}>Name: Z to A</option>
+        </select>
+    </div>    
+
+    <div>
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
     </div>
 </form>
-
 
 <!--Summary Table-->
 <table class="table table-bordered table-striped">

@@ -110,56 +110,65 @@ def summary():
 
     selected_shift = request.args.get('shift')
     selected_building = request.args.get('building')
+    name_filter = request.args.get('name')
+    sort_order = request.args.get('sort', 'desc')  # default to highest first
 
     conn = get_db_connection()
     c = conn.cursor()
 
-    if is_superuser():
-        query = 'SELECT name, SUM(points) FROM attendance'
-        params = []
-        conditions = []
+    base_query = '''
+        SELECT name, SUM(points) as total_points
+        FROM attendance
+    '''
+    where_clauses = []
+    params = []
 
+    if is_superuser():
         if selected_shift:
-            conditions.append('shift = %s')
+            where_clauses.append('shift = %s')
             params.append(selected_shift)
         if selected_building:
-            conditions.append('building = %s')
+            where_clauses.append('building = %s')
             params.append(selected_building)
-
-        if conditions:
-            query += ' WHERE ' + ' AND '.join(conditions)
-
-        query += ' GROUP BY name'
-        c.execute(query, tuple(params))
-
-    elif is_plant_manager():
-        c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
-        user_shift, user_building = c.fetchone()
-
-        c.execute('''
-            SELECT a.name, SUM(a.points)
-            FROM attendance a
-            JOIN users u ON a.user_id = u.id
-            WHERE u.shift = %s AND u.building = %s
-            GROUP BY a.name
-        ''', (user_shift, user_building))
+        if name_filter:
+            where_clauses.append('name LIKE %s')
+            params.append(f'%{name_filter}%')
     else:
         c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
         user_shift, user_building = c.fetchone()
 
-        c.execute('''
-            SELECT name, SUM(points)
-            FROM attendance
-            WHERE shift = %s AND building = %s AND user_id IN (
-                SELECT id FROM users WHERE shift = %s AND building = %s
-            )
-            GROUP BY name
-        ''', (user_shift, user_building, user_shift, user_building))
+        where_clauses.append('shift = %s AND building = %s')
+        params.extend([user_shift, user_building])
+        if name_filter:
+            where_clauses.append('name LIKE %s')
+            params.append(f'%{name_filter}%')
 
+    if where_clauses:
+        base_query += ' WHERE ' + ' AND '.join(where_clauses)
+
+    base_query += ' GROUP BY name'
+
+    if sort_order == 'asc':
+        base_query += ' ORDER BY total_points ASC'
+    elif sort_order == 'alpha':
+        base_query += ' ORDER BY name ASC'
+    elif sort_order == 'alpha_desc':
+        base_query += ' ORDER BY name DESC'
+    else:
+        base_query += ' ORDER BY total_points DESC'
+        
+    c.execute(base_query, tuple(params))
     summary_data = c.fetchall()
     conn.close()
-    return render_template('summary.html', summary=summary_data,
-                           selected_shift=selected_shift, selected_building=selected_building)
+
+    return render_template(
+        'summary.html',
+        summary=summary_data,
+        selected_shift=selected_shift,
+        selected_building=selected_building,
+        name_filter=name_filter,
+        sort_order=sort_order
+    )
 
 # Define the route for the attendance details page
 @app.route('/details/<name>')
