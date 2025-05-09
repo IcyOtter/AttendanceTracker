@@ -105,58 +105,59 @@ def log_attendance():
 @app.route('/summary')
 @login_required
 def summary():
-    if 'user_id' not in session:
-        return redirect('/login')
+    from flask import request
 
-    selected_shift = request.args.get('shift')
-    selected_building = request.args.get('building')
+    sort_order = request.args.get('sort', 'desc')
     name_filter = request.args.get('name')
-    sort_order = request.args.get('sort', 'desc')  # default to highest first
+    selected_shift = request.args.get('shift') if is_superuser() or is_plant_manager() else None
+    selected_building = request.args.get('building') if is_superuser() or is_plant_manager() else None
 
     conn = get_db_connection()
     c = conn.cursor()
 
     base_query = '''
-        SELECT name, SUM(points) as total_points
-        FROM attendance
+        SELECT a.name, SUM(a.points) as total_points
+        FROM attendance a
+        JOIN users u ON a.user_id = u.id
     '''
     where_clauses = []
     params = []
 
-    if is_superuser():
+    if is_superuser() or is_plant_manager():
         if selected_shift:
-            where_clauses.append('shift = %s')
+            where_clauses.append('u.shift = %s')
             params.append(selected_shift)
         if selected_building:
-            where_clauses.append('building = %s')
+            where_clauses.append('u.building = %s')
             params.append(selected_building)
-        if name_filter:
-            where_clauses.append('name LIKE %s')
-            params.append(f'%{name_filter}%')
     else:
+        # Restrict regular users to their shift and building
         c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
         user_shift, user_building = c.fetchone()
+        where_clauses.append('u.shift = %s')
+        params.append(user_shift)
+        where_clauses.append('u.building = %s')
+        params.append(user_building)
 
-        where_clauses.append('shift = %s AND building = %s')
-        params.extend([user_shift, user_building])
-        if name_filter:
-            where_clauses.append('name LIKE %s')
-            params.append(f'%{name_filter}%')
+    # ✅ Allow all users to filter by name
+    if name_filter:
+        where_clauses.append('a.name LIKE %s')
+        params.append(f'%{name_filter}%')
 
     if where_clauses:
         base_query += ' WHERE ' + ' AND '.join(where_clauses)
 
-    base_query += ' GROUP BY name'
+    base_query += ' GROUP BY a.name'
 
     if sort_order == 'asc':
         base_query += ' ORDER BY total_points ASC'
     elif sort_order == 'alpha':
-        base_query += ' ORDER BY name ASC'
+        base_query += ' ORDER BY a.name ASC'
     elif sort_order == 'alpha_desc':
-        base_query += ' ORDER BY name DESC'
+        base_query += ' ORDER BY a.name DESC'
     else:
         base_query += ' ORDER BY total_points DESC'
-        
+
     c.execute(base_query, tuple(params))
     summary_data = c.fetchall()
     conn.close()
@@ -180,38 +181,34 @@ def details(name):
     conn = get_db_connection()
     c = conn.cursor()
 
-    # Check if any attendance records exist for the name
-    c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
-    details_data = c.fetchall()
-
-    # If no records, just redirect
-    if not details_data:
-        conn.close()
-        return redirect('/summary')
-
-    # Access control
+    # Get current user's shift/building
     if is_superuser() or is_plant_manager():
+        # Superusers and plant managers bypass restriction
+        c.execute('SELECT id, date, issue, points FROM attendance WHERE name = %s ORDER BY date', (name,))
+        details_data = c.fetchall()
         conn.close()
+        if not details_data:
+            return redirect('/summary')
         return render_template('details.html', name=name, details=details_data)
     else:
         c.execute('SELECT shift, building FROM users WHERE id = %s', (session['user_id'],))
         user_shift, user_building = c.fetchone()
 
+        # Check if any record matches the user's shift/building
         c.execute('''
-            SELECT 1
-            FROM users u
-            JOIN attendance a ON a.user_id = u.id
+            SELECT id, date, issue, points
+            FROM attendance a
+            JOIN users u ON a.user_id = u.id
             WHERE a.name = %s AND u.shift = %s AND u.building = %s
-            LIMIT 1
+            ORDER BY date
         ''', (name, user_shift, user_building))
-        allowed = c.fetchone()
-
+        details_data = c.fetchall()
         conn.close()
 
-        if not allowed:
-            return 'Access denied.'
+        if not details_data:
+            return redirect('/summary')
 
-    return render_template('details.html', name=name, details=details_data)
+        return render_template('details.html', name=name, details=details_data)
 
 # Define the route for deleting an entry
 @app.route('/delete/<int:entry_id>', methods=['POST'])
